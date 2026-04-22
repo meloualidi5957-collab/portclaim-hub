@@ -1,0 +1,31 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: portclaim-backend
+  
+  datasource:
+    # L'option createDatabaseIfNotExist=true tente de créer la base automatiquement
+    url: jdbc:mysql://localhost:3306/reclamations_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
+    username: root
+    password: ""
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      # 'update' crée les tables automatiquement au premier lancement
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+
+# Configuration personnalisée pour le JWT
+app:
+  jwt:
+    # Clé secrète de 64 caractères (Base64)
+    secret: bXlTdXBlclNlY3JldEtleUZvclBvcnRDbGFpbUh1YlByb2plY3QyMDI1U2VjdXJlVG9rZW5HZW4=
+    # Expiration : 24 heures (en millisecondes)
+    expiration: 86400000

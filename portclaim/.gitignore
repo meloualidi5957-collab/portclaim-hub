@@ -1,0 +1,18 @@
+# Dépendances Node (Frontend)
+node_modules/
+build/
+.env
+
+# Fichiers compilés Java (Backend)
+target/
+*.class
+.mvn/
+
+# Fichiers de configuration VS Code / IntelliJ
+.vscode/
+.idea/
+*.iml
+
+# Divers
+.DS_Store
+Thumbs.db
