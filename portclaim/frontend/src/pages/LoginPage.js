@@ -28,9 +28,9 @@ export default function LoginPage() {
   const [motDePasse, setMotDePasse] = useState('admin123');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Redirection si déjà connecté
+  // MODIFICATION : Redirection vers /reclamations si déjà connecté
   useEffect(() => { 
-    if (token) navigate('/'); 
+    if (token) navigate('/reclamations'); 
   }, [token, navigate]);
 
   const handleSubmit = (e) => { 

@@ -2,9 +2,7 @@ import axios from 'axios';
 
 const axiosClient = axios.create({
   baseURL: 'http://localhost:8080/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // On retire le Content-Type forcé en JSON pour laisser Axios gérer les fichiers (FormData)
 });
 
 // Ce code ajoute automatiquement ton Token JWT à chaque appel API

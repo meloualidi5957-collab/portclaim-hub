@@ -12,6 +12,19 @@ function* fetchWorker(action) {
   }
 }
 
+// --- NOUVEAU : Worker pour récupérer les détails via l'ID ---
+function* fetchDetailsWorker(action) {
+  try {
+    const id = action.payload;
+    // On appelle l'API de ton ReclamationService.java (get par ID)
+    const res = yield call(api.get, `/reclamations/${id}`);
+    yield put({ type: T.FETCH_RECLAMATION_DETAILS_SUCCESS, payload: res.data });
+  } catch (e) {
+    yield put({ type: T.FETCH_RECLAMATION_DETAILS_FAILURE, error: e.message });
+  }
+}
+// ------------------------------------------------------------
+
 function* createWorker(action) {
   try {
     const res = yield call(api.post, '/reclamations', action.payload);
@@ -35,4 +48,7 @@ export default function* reclamationSaga() {
   yield takeLatest(T.FETCH_RECLAMATIONS_REQUEST, fetchWorker);
   yield takeLatest(T.CREATE_RECLAMATION_REQUEST, createWorker);
   yield takeLatest(T.UPDATE_STATUT_REQUEST, updateStatutWorker);
+  
+  // --- NOUVEAU : On écoute la demande de détails ---
+  yield takeLatest(T.FETCH_RECLAMATION_DETAILS_REQUEST, fetchDetailsWorker);
 }
