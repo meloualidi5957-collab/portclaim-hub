@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { Box } from '@mui/material';
+import axios from './api/client'; // --- AJOUT : Import d'axios pour le logout ---
 
 // Pages
 import LoginPage from './pages/LoginPage';
@@ -9,8 +10,8 @@ import ReclamationsPage from './pages/ReclamationsPage';
 import ReclamationDetailsPage from './pages/ReclamationDetailsPage'; 
 import NotificationsPage from './pages/NotificationsPage';
 import UsersManagementPage from './pages/UsersManagementPage';
-// NOUVEAU : Import de la page d'analyses
 import AnalysesPage from './pages/AnalysesPage';
+import AuditPage from './pages/AuditPage'; 
 
 // Composants
 import Sidebar from './components/Sidebar';
@@ -20,10 +21,20 @@ function Layout({ children }) {
   const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    dispatch(logout());
-    window.location.href = '/login';
+  // --- MODIFIÉ : handleLogout devient asynchrone pour l'Audit ---
+  const handleLogout = async () => {
+    try {
+      // 1. On prévient le backend pour enregistrer l'action LOGOUT
+      await axios.post('/auth/logout'); 
+    } catch (err) {
+      // On log l'erreur en console mais on continue la déconnexion locale
+      console.error("Erreur lors de l'enregistrement du logout", err);
+    } finally {
+      // 2. Nettoyage local (LocalStorage + Redux) et redirection
+      localStorage.clear();
+      dispatch(logout());
+      window.location.href = '/login';
+    }
   };
 
   return (
@@ -65,7 +76,6 @@ export default function App() {
         element={token ? <Layout><NotificationsPage /></Layout> : <Navigate to="/login" />} 
       />
 
-      {/* NOUVEAU : Route pour la page d'Analyses (Réservée aux ADMINS) */}
       <Route 
         path="/analyses" 
         element={
@@ -75,7 +85,6 @@ export default function App() {
         } 
       />
 
-      {/* Gestion des Utilisateurs (Réservée aux ADMINS) */}
       <Route 
         path="/utilisateurs" 
         element={
@@ -85,7 +94,15 @@ export default function App() {
         } 
       />
 
-      {/* Redirection automatique pour toutes les autres URL */}
+      <Route 
+        path="/audit" 
+        element={
+          token && user?.role === 'ADMIN' 
+            ? <Layout><AuditPage /></Layout> 
+            : <Navigate to="/reclamations" />
+        } 
+      />
+
       <Route path="*" element={<Navigate to="/reclamations" />} />
     </Routes>
   );

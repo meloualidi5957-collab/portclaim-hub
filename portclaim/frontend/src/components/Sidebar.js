@@ -12,7 +12,8 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import AnchorIcon from '@mui/icons-material/Anchor';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
-import BarChartIcon from '@mui/icons-material/BarChart'; // Icône pour les analyses
+import BarChartIcon from '@mui/icons-material/BarChart'; 
+import HistoryIcon from '@mui/icons-material/History'; // --- AJOUT : Icône pour l'Audit ---
 
 export default function Sidebar({ onLogout, user }) {
   const navigate = useNavigate();
@@ -45,7 +46,6 @@ export default function Sidebar({ onLogout, user }) {
       path: '/notifications',
       show: true
     },
-    // NOUVEAU : Onglet Analyses réservé aux Admins
     { 
       text: 'Analyses', 
       icon: <BarChartIcon />, 
@@ -56,6 +56,13 @@ export default function Sidebar({ onLogout, user }) {
       text: 'Gestion Utilisateurs', 
       icon: <ManageAccountsIcon />, 
       path: '/utilisateurs', 
+      show: user?.role === 'ADMIN' 
+    },
+    // --- AJOUT : Onglet Audit réservé aux Admins ---
+    { 
+      text: 'Journal d\'Audit', 
+      icon: <HistoryIcon />, 
+      path: '/audit', 
       show: user?.role === 'ADMIN' 
     },
   ];

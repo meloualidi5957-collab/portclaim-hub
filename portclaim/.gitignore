@@ -16,3 +16,8 @@ target/
 # Divers
 .DS_Store
 Thumbs.db
+portclaim/backend/uploads/
+portclaim/frontend/node_modules/
+target/
+.idea/
+uploads/

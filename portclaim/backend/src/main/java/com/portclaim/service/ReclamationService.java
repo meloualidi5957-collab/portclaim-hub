@@ -16,7 +16,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit; // Ajout pour le calcul du temps de résolution
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
@@ -26,6 +26,10 @@ public class ReclamationService {
     private final UtilisateurRepository userRepo;
     private final ReponseRepository reponseRepo;
     private final NotificationRepository notificationRepo;
+    
+    // --- NOUVEAU : Injection du service d'Audit ---
+    private final AuditService auditService;
+    // ----------------------------------------------
 
     private final Path fileStorageLocation = Paths.get("uploads").toAbsolutePath().normalize();
 
@@ -58,34 +62,25 @@ public class ReclamationService {
         }
     }
 
-    /**
-     * ANALYSES AVANCÉES : Statistiques détaillées pour AnalysesPage.js
-     * Calcule les volumes par statut, priorité, période et temps de résolution.
-     */
     public Map<String, Object> getDashboardStats() {
         Map<String, Object> stats = new HashMap<>();
         List<Reclamation> all = repo.findAll();
         
-        // 1. Statistiques Utilisateurs
         stats.put("totalUtilisateurs", userRepo.count());
         stats.put("totalClients", userRepo.findByRole(Role.CLIENT).size());
         stats.put("totalAgents", userRepo.findByRole(Role.AGENT).size());
 
-        // 2. Statistiques Réclamations par Statut
         stats.put("totalReclamations", all.size());
         stats.put("reclamationsOuvertes", all.stream().filter(r -> r.getStatut() == Statut.OUVERTE).count());
         stats.put("reclamationsEnCours", all.stream().filter(r -> r.getStatut() == Statut.EN_COURS).count());
         stats.put("reclamationsResolues", all.stream().filter(r -> r.getStatut() == Statut.RESOLUE).count());
 
-        // 3. Répartition par Priorité
         Map<String, Long> parPriorite = new HashMap<>();
         for (Priorite p : Priorite.values()) {
             parPriorite.put(p.name(), all.stream().filter(r -> r.getPriorite() == p).count());
         }
         stats.put("parPriorite", parPriorite);
 
-        // 4. Temps moyen de résolution (en heures)
-        // Calcule la différence entre dateResolution et dateCreation
         double avgHours = all.stream()
                 .filter(r -> r.getStatut() == Statut.RESOLUE && r.getDateResolution() != null)
                 .mapToLong(r -> ChronoUnit.HOURS.between(r.getDateCreation(), r.getDateResolution()))
@@ -93,7 +88,6 @@ public class ReclamationService {
                 .orElse(0.0);
         stats.put("tempsMoyenResolution", Math.round(avgHours * 10.0) / 10.0);
 
-        // 5. Évolution des 7 derniers jours (identification des pics)
         List<Map<String, Object>> evolution = new ArrayList<>();
         for (int i = 6; i >= 0; i--) {
             LocalDateTime date = LocalDateTime.now().minusDays(i);
@@ -158,6 +152,10 @@ public class ReclamationService {
             
         Reclamation saved = repo.save(r);
         notifierAdmins("Nouvelle réclamation déposée : " + saved.getReference(), saved.getId());
+        
+        // --- NOUVEAU : Log de création ---
+        auditService.logAction("CREATION_RECLAMATION", "Nouvelle réclamation déposée : " + saved.getTitre(), client, "RECLAMATION: " + saved.getReference());
+        
         return ReclamationView.from(saved);
     }
 
@@ -165,11 +163,41 @@ public class ReclamationService {
     public ReclamationView updateStatut(Long id, Statut nouveau, Utilisateur current) {
         Reclamation r = repo.findById(id).orElseThrow();
         if (current.getRole() == Role.CLIENT) throw new RuntimeException("Action non autorisée");
+        
+        String ancienStatut = r.getStatut().name();
         r.setStatut(nouveau);
         if (nouveau == Statut.RESOLUE) r.setDateResolution(LocalDateTime.now());
         r.setDateModification(LocalDateTime.now());
         Reclamation saved = repo.save(r);
         creerNotification(r.getClient(), "Statut mis à jour : " + nouveau, r.getId());
+        
+        // --- NOUVEAU : Log de changement de statut ---
+        auditService.logAction("MISE_A_JOUR_STATUT", "Passage du statut de " + ancienStatut + " à " + nouveau, current, "RECLAMATION: " + r.getReference());
+        
+        return ReclamationView.from(saved);
+    }
+
+    @Transactional
+    public ReclamationView updatePriorite(Long id, Priorite nouvellePriorite, Utilisateur current) {
+        if (current.getRole() != Role.ADMIN) {
+            throw new RuntimeException("Action réservée à l'administrateur");
+        }
+        
+        Reclamation r = repo.findById(id).orElseThrow(() -> new RuntimeException("Réclamation introuvable"));
+        String anciennePriorite = r.getPriorite() != null ? r.getPriorite().name() : "NON_DEFINIE";
+        
+        r.setPriorite(nouvellePriorite);
+        r.setDateModification(LocalDateTime.now());
+        
+        Reclamation saved = repo.save(r);
+        
+        if (nouvellePriorite == Priorite.CRITIQUE && r.getAgent() != null) {
+            creerNotification(r.getAgent(), "Urgence : Priorité passée à CRITIQUE sur " + r.getReference(), r.getId());
+        }
+        
+        // --- NOUVEAU : Log de changement de priorité ---
+        auditService.logAction("MISE_A_JOUR_PRIORITE", "Priorité modifiée de " + anciennePriorite + " à " + nouvellePriorite, current, "RECLAMATION: " + r.getReference());
+        
         return ReclamationView.from(saved);
     }
 
@@ -184,6 +212,10 @@ public class ReclamationService {
         Reclamation saved = repo.save(r);
         creerNotification(agent, "Nouvelle affectation : " + r.getReference(), r.getId());
         creerNotification(r.getClient(), "Agent affecté : " + agent.getPrenom(), r.getId());
+        
+        // --- NOUVEAU : Log d'affectation ---
+        auditService.logAction("AFFECTATION_AGENT", "Réclamation assignée à l'agent : " + agent.getPrenom() + " " + agent.getNom(), current, "RECLAMATION: " + r.getReference());
+        
         return ReclamationView.from(saved);
     }
 
@@ -199,6 +231,10 @@ public class ReclamationService {
         } else if (auteur.getRole() != Role.CLIENT) {
             creerNotification(r.getClient(), "Réponse reçue sur " + r.getReference(), r.getId());
         }
+        
+        // --- NOUVEAU : Log de messagerie ---
+        auditService.logAction("NOUVEAU_MESSAGE", "Nouveau message ajouté au fil de discussion", auteur, "RECLAMATION: " + r.getReference());
+        
         return ReponseView.from(saved);
     }
 }

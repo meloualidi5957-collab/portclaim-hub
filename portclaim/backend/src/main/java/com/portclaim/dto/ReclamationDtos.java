@@ -22,6 +22,13 @@ public class ReclamationDtos {
         private Statut statut; 
     }
 
+    // --- NOUVEAU : DTO pour la mise à jour de la priorité par l'Admin ---
+    @Getter @Setter @NoArgsConstructor @AllArgsConstructor
+    public static class UpdatePrioriteRequest { 
+        private Priorite priorite; 
+    }
+    // -------------------------------------------------------------------
+
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor
     public static class AffectationRequest { 
         private Long agentId; 
@@ -44,9 +51,7 @@ public class ReclamationDtos {
         private Statut statut; 
         private Priorite priorite;
         
-        // --- NOUVEAU : Champ pour renvoyer le nom du fichier au Frontend ---
         private String pieceJointe; 
-        // -------------------------------------------------------------------
 
         private String clientNom; 
         private String agentNom;
@@ -65,7 +70,6 @@ public class ReclamationDtos {
                 .navire(r.getNavire())
                 .statut(r.getStatut())
                 .priorite(r.getPriorite())
-                // FIX : Mapping de la pièce jointe
                 .pieceJointe(r.getPieceJointe()) 
                 .clientNom(r.getClient() != null ? r.getClient().getPrenom() + " " + r.getClient().getNom() : null)
                 .agentNom(r.getAgent() != null ? r.getAgent().getPrenom() + " " + r.getAgent().getNom() : null)

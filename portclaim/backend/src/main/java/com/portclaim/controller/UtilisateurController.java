@@ -7,7 +7,6 @@ import com.portclaim.repository.UtilisateurRepository;
 import com.portclaim.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,11 +17,11 @@ import java.util.List;
 public class UtilisateurController {
 
     private final UtilisateurRepository repo;
-    private final AuthService authService; // Ajouté pour gérer l'inscription
+    private final AuthService authService; 
 
-    // --- TON ANCIENNE MÉTHODE (CONSERVÉE) ---
+    // --- TON ANCIENNE MÉTHODE (CONSERVÉE ET CORRIGÉE) ---
     @GetMapping("/agents")
-    @PreAuthorize("hasRole('ADMIN')") 
+    // Suppression du @PreAuthorize car la sécurité est déjà gérée par SecurityConfig
     public ResponseEntity<List<Utilisateur>> listAgents() {
         return ResponseEntity.ok(repo.findByRole(Role.AGENT));
     }

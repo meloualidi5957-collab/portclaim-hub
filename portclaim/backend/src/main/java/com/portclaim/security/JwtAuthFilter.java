@@ -31,8 +31,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     String email = jwtService.extractEmail(token);
                     var user = userRepo.findByEmail(email).orElse(null);
                     if (user != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                        // --- MODIFIÉ : Retrait du préfixe "ROLE_" pour correspondre au SecurityConfig ---
                         var auth = new UsernamePasswordAuthenticationToken(user, null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())));
+                            List.of(new SimpleGrantedAuthority(user.getRole().name())));
+                        // ---------------------------------------------------------------------------------
                         auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
                         SecurityContextHolder.getContext().setAuthentication(auth);
                     }

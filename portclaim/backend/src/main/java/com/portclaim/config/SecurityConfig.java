@@ -1,4 +1,5 @@
 package com.portclaim.config;
+
 import com.portclaim.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -28,6 +29,10 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
                 .requestMatchers("/api/auth/**").permitAll()
+                // --- AJOUT : Sécurisation explicite des routes ADMIN ---
+                .requestMatchers("/api/audit/**").hasAuthority("ADMIN")
+                .requestMatchers("/api/utilisateurs/**").hasAuthority("ADMIN")
+                // -------------------------------------------------------
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

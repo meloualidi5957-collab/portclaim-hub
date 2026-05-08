@@ -57,6 +57,14 @@ public class ReclamationController {
         return ResponseEntity.ok(service.updateStatut(id, req.getStatut(), user));
     }
 
+    // --- NOUVEAU : Endpoint pour la mise à jour de la priorité ---
+    @PatchMapping("/{id}/priorite")
+    public ResponseEntity<ReclamationView> updatePriorite(@PathVariable Long id,
+            @RequestBody UpdatePrioriteRequest req, @AuthenticationPrincipal Utilisateur user) {
+        return ResponseEntity.ok(service.updatePriorite(id, req.getPriorite(), user));
+    }
+    // -------------------------------------------------------------
+
     @PatchMapping("/{id}/affectation")
     public ResponseEntity<ReclamationView> affecter(@PathVariable Long id,
             @RequestBody AffectationRequest req, @AuthenticationPrincipal Utilisateur user) {

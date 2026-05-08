@@ -16,6 +16,9 @@ public class AuthService {
     private final UtilisateurRepository userRepo;
     private final PasswordEncoder encoder;
     private final JwtService jwt;
+    
+    // --- NOUVEAU : Injection du service d'Audit ---
+    private final AuditService auditService;
 
     public AuthResponse login(LoginRequest req) {
         Utilisateur u = userRepo.findByEmail(req.getEmail())
@@ -28,6 +31,9 @@ public class AuthService {
             
         String token = jwt.generateToken(u.getEmail(), Map.of("role", u.getRole().name(), "uid", u.getId()));
         
+        // --- NOUVEAU : Log de connexion réussie ---
+        auditService.logAction("LOGIN", "L'utilisateur s'est connecté au système", u, "SYSTEME");
+        
         return AuthResponse.builder().token(token).userId(u.getId()).email(u.getEmail())
             .nom(u.getNom()).prenom(u.getPrenom()).role(u.getRole()).build();
     }
@@ -39,7 +45,7 @@ public class AuthService {
             .nom(req.getNom())
             .prenom(req.getPrenom())
             .email(req.getEmail())
-            .cin(req.getCin()) // --- NOUVEAU : Sauvegarde du CIN ---
+            .cin(req.getCin()) 
             .motDePasse(encoder.encode(req.getMotDePasse()))
             .role(req.getRole() == null ? com.portclaim.entity.Role.CLIENT : req.getRole())
             .entreprise(req.getEntreprise())
@@ -47,10 +53,24 @@ public class AuthService {
             .actif(true)
             .build();
 
-        userRepo.save(u);
+        Utilisateur savedUser = userRepo.save(u);
 
-        // NOUVEAU : On retourne juste une confirmation sans forcer la connexion.
-        // Comme ça, l'Administrateur qui crée le compte n'est pas déconnecté de sa session !
-        return AuthResponse.builder().email(u.getEmail()).build();
+        // --- NOUVEAU : Log de création de compte ---
+        // On indique qui a été créé et avec quel rôle
+        auditService.logAction(
+            "CREATION_COMPTE", 
+            "Nouvel utilisateur créé : " + savedUser.getNom() + " " + savedUser.getPrenom() + " (Rôle: " + savedUser.getRole() + ")", 
+            savedUser, 
+            "UTILISATEUR: " + savedUser.getEmail()
+        );
+
+        return AuthResponse.builder().email(savedUser.getEmail()).build();
+    }
+
+    // --- NOUVEAU : Méthode pour le Logout ---
+    public void logout(Utilisateur u) {
+        if (u != null) {
+            auditService.logAction("LOGOUT", "L'utilisateur s'est déconnecté", u, "SYSTEME");
+        }
     }
 }
