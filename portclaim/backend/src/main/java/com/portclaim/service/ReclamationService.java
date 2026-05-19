@@ -246,4 +246,49 @@ public class ReclamationService {
         
         return ReponseView.from(saved);
     }
+    // --- Logique de récupération du contexte pour le Chatbot (MULTI-RÔLES) ---
+    public String discuterAvecChatbot(String question, Utilisateur utilisateur) {
+        List<Reclamation> reclamations;
+        String roleStr = utilisateur.getRole().name();
+        
+        // 1. Filtrage intelligent selon le RÔLE de l'utilisateur
+        if ("ADMIN".equals(roleStr)) {
+            reclamations = repo.findAll(); // L'Admin voit TOUTE la base de données
+        } else if ("AGENT".equals(roleStr)) {
+            reclamations = repo.findByAgentId(utilisateur.getId()); // L'Agent voit SES dossiers affectés
+        } else {
+            reclamations = repo.findByClientId(utilisateur.getId()); // Le Client voit SES propres réclamations
+        }
+        
+        // 2. Construction d'un contexte adapté pour Gemini
+        StringBuilder contexteBuilder = new StringBuilder();
+        contexteBuilder.append("L'utilisateur actuel s'appelle ").append(utilisateur.getPrenom()).append(" ").append(utilisateur.getNom());
+        contexteBuilder.append(" et son rôle sur la plateforme est ").append(roleStr).append(".\n");
+        
+        if (reclamations.isEmpty()) {
+            contexteBuilder.append("Il n'y a aucune réclamation pertinente à afficher pour le moment.\n");
+        } else {
+            contexteBuilder.append("Voici la liste des réclamations dans son périmètre :\n");
+            
+            // On limite à 50 dossiers maximum envoyés à l'IA pour ne pas dépasser la mémoire (Tokens) de Gemini
+            int limite = Math.min(reclamations.size(), 50);
+            for (int i = 0; i < limite; i++) {
+                Reclamation r = reclamations.get(i);
+                contexteBuilder.append("- Référence : ").append(r.getReference())
+                               .append(" | Titre : ").append(r.getTitre())
+                               .append(" | Statut : ").append(r.getStatut())
+                               .append(" | Priorité : ").append(r.getPriorite());
+                
+                if (r.getAgent() != null) {
+                    contexteBuilder.append(" | Traité par : ").append(r.getAgent().getPrenom()).append(" ").append(r.getAgent().getNom());
+                } else {
+                    contexteBuilder.append(" | Traité par : Aucun agent affecté");
+                }
+                contexteBuilder.append("\n");
+            }
+        }
+
+        // 3. On envoie la question et le contexte au service IA
+        return aiService.interrogerChatbot(question, contexteBuilder.toString());
+    }
 }

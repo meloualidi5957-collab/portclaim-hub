@@ -17,6 +17,10 @@ import AuditPage from './pages/AuditPage';
 import Sidebar from './components/Sidebar';
 import { logout } from './store/actions/authActions';
 
+// --- NOUVEAU : Importation du Widget IA ---
+import ChatWidget from './components/ChatWidget';
+// ------------------------------------------
+
 function Layout({ children }) {
   const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
@@ -52,58 +56,64 @@ export default function App() {
   const user = useSelector(state => state.auth.user);
 
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
+    <> {/* <-- NOUVEAU : Ouverture du Fragment React pour englober les Routes ET le ChatWidget */}
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
 
-      {/* Route par défaut vers les réclamations */}
-      <Route 
-        path="/" 
-        element={token ? <Layout><ReclamationsPage /></Layout> : <Navigate to="/login" />} 
-      />
+        {/* Route par défaut vers les réclamations */}
+        <Route 
+          path="/" 
+          element={token ? <Layout><ReclamationsPage /></Layout> : <Navigate to="/login" />} 
+        />
+        
+        <Route 
+          path="/reclamations" 
+          element={token ? <Layout><ReclamationsPage /></Layout> : <Navigate to="/login" />} 
+        />
+        
+        <Route 
+          path="/reclamations/:id" 
+          element={token ? <Layout><ReclamationDetailsPage /></Layout> : <Navigate to="/login" />} 
+        />
+        
+        <Route 
+          path="/notifications" 
+          element={token ? <Layout><NotificationsPage /></Layout> : <Navigate to="/login" />} 
+        />
+
+        <Route 
+          path="/analyses" 
+          element={
+            token && user?.role === 'ADMIN' 
+              ? <Layout><AnalysesPage /></Layout> 
+              : <Navigate to="/reclamations" />
+          } 
+        />
+
+        <Route 
+          path="/utilisateurs" 
+          element={
+            token && user?.role === 'ADMIN' 
+              ? <Layout><UsersManagementPage /></Layout> 
+              : <Navigate to="/reclamations" />
+          } 
+        />
+
+        <Route 
+          path="/audit" 
+          element={
+            token && user?.role === 'ADMIN' 
+              ? <Layout><AuditPage /></Layout> 
+              : <Navigate to="/reclamations" />
+          } 
+        />
+
+        <Route path="*" element={<Navigate to="/reclamations" />} />
+      </Routes>
+
       
-      <Route 
-        path="/reclamations" 
-        element={token ? <Layout><ReclamationsPage /></Layout> : <Navigate to="/login" />} 
-      />
+      <ChatWidget />
       
-      <Route 
-        path="/reclamations/:id" 
-        element={token ? <Layout><ReclamationDetailsPage /></Layout> : <Navigate to="/login" />} 
-      />
-      
-      <Route 
-        path="/notifications" 
-        element={token ? <Layout><NotificationsPage /></Layout> : <Navigate to="/login" />} 
-      />
-
-      <Route 
-        path="/analyses" 
-        element={
-          token && user?.role === 'ADMIN' 
-            ? <Layout><AnalysesPage /></Layout> 
-            : <Navigate to="/reclamations" />
-        } 
-      />
-
-      <Route 
-        path="/utilisateurs" 
-        element={
-          token && user?.role === 'ADMIN' 
-            ? <Layout><UsersManagementPage /></Layout> 
-            : <Navigate to="/reclamations" />
-        } 
-      />
-
-      <Route 
-        path="/audit" 
-        element={
-          token && user?.role === 'ADMIN' 
-            ? <Layout><AuditPage /></Layout> 
-            : <Navigate to="/reclamations" />
-        } 
-      />
-
-      <Route path="*" element={<Navigate to="/reclamations" />} />
-    </Routes>
+    </> 
   );
 }

@@ -14,6 +14,8 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid; // --- NOUVEAU ---
 import java.util.List;
 import java.util.Map;
+import com.portclaim.dto.ChatRequest;
+
 
 @RestController
 @RequestMapping("/api/reclamations")
@@ -88,4 +90,14 @@ public class ReclamationController {
         return ResponseEntity.ok("Merci pour votre retour ! Votre évaluation a été enregistrée.");
     }
     // ---------------------------------------------------------------------
+    // --- NOUVEAU : Endpoint sécurisé pour le Chatbot IA ---
+    @PostMapping("/chatbot")
+    public ResponseEntity<Map<String, String>> appelerChatbot(
+            @Valid @RequestBody com.portclaim.dto.ChatRequest request,
+            @AuthenticationPrincipal Utilisateur user) {
+        
+        String reponseIA = service.discuterAvecChatbot(request.getQuestion(), user);
+        return ResponseEntity.ok(Map.of("reply", reponseIA));
+    }
+    
 }
