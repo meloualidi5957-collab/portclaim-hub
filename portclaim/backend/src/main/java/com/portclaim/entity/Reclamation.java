@@ -21,9 +21,8 @@ public class Reclamation {
     private String numeroConteneur;
     private String navire;
 
-    // --- NOUVEAU : Champ pour stocker le nom du fichier sur le serveur ---
+    // --- Champ pour stocker le nom du fichier sur le serveur ---
     private String pieceJointe;
-    // ---------------------------------------------------------------------
 
     @Enumerated(EnumType.STRING) @Column(nullable = false) private Statut statut;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private Priorite priorite;
@@ -41,6 +40,10 @@ public class Reclamation {
     @OneToMany(mappedBy = "reclamation", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Reponse> reponses = new ArrayList<>();
+
+    // --- NOUVEAU : Lien vers l'évaluation du client ---
+    @OneToOne(mappedBy = "reclamation", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Feedback feedback;
 
     @PrePersist
     protected void onCreate() {

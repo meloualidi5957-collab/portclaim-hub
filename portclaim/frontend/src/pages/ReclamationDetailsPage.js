@@ -5,8 +5,9 @@ import axios from '../api/client';
 import { 
   Box, Typography, Button, Paper, Grid, Chip, Divider, 
   Stepper, Step, StepLabel, CircularProgress, IconButton, Card, CardContent,
-  Select, MenuItem, FormControl, TextField,
-  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions // --- NOUVEAU : Imports pour la popup de confirmation ---
+  Select, MenuItem, FormControl, TextField, Rating, 
+  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions
+
 } from '@mui/material';
 
 // Icônes
@@ -19,10 +20,13 @@ import AttachFileIcon from '@mui/icons-material/AttachFile';
 import DownloadIcon from '@mui/icons-material/Download'; 
 import ForumIcon from '@mui/icons-material/Forum'; 
 import SendIcon from '@mui/icons-material/Send'; 
-import BlockIcon from '@mui/icons-material/Block'; // --- NOUVEAU : Icône pour le bouton Rejeter ---
+import BlockIcon from '@mui/icons-material/Block'; 
+
+// --- NOUVEAU : Importation du composant de Feedback ---
+import FeedbackModal from '../components/FeedbackModal';
+// ------------------------------------------------------
 
 // Actions
-// --- NOUVEAU : Import de updateStatut ---
 import { fetchReclamationDetails, updatePriorite, addReponse, updateStatut } from '../store/actions/reclamationActions';
 
 const steps = ['OUVERTE', 'EN_COURS', 'RESOLUE'];
@@ -31,7 +35,7 @@ const statutColor = {
   EN_COURS: 'warning',
   RESOLUE: 'success',
   CLOTUREE: 'success',
-  REJETEE: 'error' // Le rouge s'affichera automatiquement
+  REJETEE: 'error'
 };
 
 const prioriteColor = {
@@ -48,14 +52,25 @@ export default function ReclamationDetailsPage() {
 
   const [messageText, setMessageText] = useState('');
   
-  // --- NOUVEAU : État pour gérer l'ouverture de la popup de confirmation de rejet ---
   const [openRejectDialog, setOpenRejectDialog] = useState(false);
+
+  // --- NOUVEAU : État pour ouvrir/fermer la fenêtre de Feedback ---
+  const [openFeedbackDialog, setOpenFeedbackDialog] = useState(false);
+  // ----------------------------------------------------------------
 
   useEffect(() => {
     if (id) {
       dispatch(fetchReclamationDetails(id));
     }
   }, [dispatch, id]);
+
+  // --- NOUVEAU : Déclenchement automatique de la pop-up de Feedback si le ticket est Résolu ---
+  useEffect(() => {
+    if (currentDetail && currentDetail.statut === 'RESOLUE' && user?.role === 'CLIENT') {
+      setOpenFeedbackDialog(true);
+    }
+  }, [currentDetail, user]);
+  // -------------------------------------------------------------------------------------------
 
   const handleDownload = async (fileName) => {
     try {
@@ -86,12 +101,10 @@ export default function ReclamationDetailsPage() {
     }
   };
 
-  // --- NOUVEAU : Fonction pour valider le rejet ---
   const handleConfirmReject = () => {
     dispatch(updateStatut(currentDetail.id, 'REJETEE'));
     setOpenRejectDialog(false);
   };
-  // -----------------------------------------------
 
   if (loading || !currentDetail) {
     return (
@@ -104,7 +117,6 @@ export default function ReclamationDetailsPage() {
   const activeStep = steps.indexOf(currentDetail.statut === 'CLOTUREE' ? 'RESOLUE' : currentDetail.statut);
   const myFullName = `${user?.prenom} ${user?.nom}`;
 
-  // Logique pour afficher ou non le bouton de rejet
   const canReject = 
     (user?.role === 'ADMIN' || (user?.role === 'AGENT' && user?.id === currentDetail.agentId)) && 
     !['RESOLUE', 'CLOTUREE', 'REJETEE'].includes(currentDetail.statut);
@@ -126,7 +138,6 @@ export default function ReclamationDetailsPage() {
         </Box>
       </Box>
 
-      {/* On n'affiche le Stepper que si la réclamation n'est pas rejetée */}
       {currentDetail.statut !== 'REJETEE' && (
         <Paper sx={{ p: 4, mb: 4, borderRadius: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
           <Stepper activeStep={activeStep} alternativeLabel>
@@ -159,7 +170,33 @@ export default function ReclamationDetailsPage() {
                     sx={{ fontWeight: 800, borderRadius: 2 }} 
                   />
                   
-                  {/* --- NOUVEAU : Bouton Rejeter --- */}
+                  {/* --- MODIFICATION : Affichage conditionnel Feedback --- */}
+                  {currentDetail.statut === 'RESOLUE' && currentDetail.feedbackNote ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: '#fef3c7', px: 2, py: 1, borderRadius: 2, border: '1px solid #f59e0b' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 800, color: '#d97706' }}>Évaluation :</Typography>
+                      <Rating value={currentDetail.feedbackNote} readOnly size="small" />
+                    </Box>
+                  ) : (
+                    user?.role === 'CLIENT' && currentDetail.statut === 'RESOLUE' && (
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() => setOpenFeedbackDialog(true)}
+                        sx={{ 
+                          borderRadius: 2, 
+                          textTransform: 'none', 
+                          fontWeight: 700, 
+                          bgcolor: '#f59e0b', 
+                          color: '#fff',
+                          '&:hover': { bgcolor: '#d97706' } 
+                        }}
+                      >
+                        ⭐ Donner mon avis
+                      </Button>
+                    )
+                  )}
+                  {/* -------------------------------------------------------- */}
+                  
                   {canReject && (
                     <Button 
                       variant="outlined" 
@@ -172,7 +209,6 @@ export default function ReclamationDetailsPage() {
                       Rejeter le dossier
                     </Button>
                   )}
-                  {/* -------------------------------- */}
                 </Box>
               </Box>
 
@@ -248,7 +284,6 @@ export default function ReclamationDetailsPage() {
             </CardContent>
           </Card>
 
-          {/* CARTE MESSAGERIE (CHAT) */}
           <Card sx={{ borderRadius: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
             <CardContent sx={{ p: 4 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
@@ -287,7 +322,6 @@ export default function ReclamationDetailsPage() {
                 )}
               </Box>
 
-              {/* On bloque la saisie si la réclamation est rejetée */}
               {currentDetail.statut !== 'REJETEE' && (
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
                   <TextField
@@ -377,7 +411,6 @@ export default function ReclamationDetailsPage() {
         </Grid>
       </Grid>
 
-      {/* --- NOUVEAU : POPUP DE CONFIRMATION DE REJET --- */}
       <Dialog
         open={openRejectDialog}
         onClose={() => setOpenRejectDialog(false)}
@@ -409,7 +442,15 @@ export default function ReclamationDetailsPage() {
           </Button>
         </DialogActions>
       </Dialog>
-      {/* ------------------------------------------------ */}
+
+      {/* --- NOUVEAU : INTEGRATION DU COMPOSANT FEEDBACKMODAL --- */}
+      <FeedbackModal 
+        open={openFeedbackDialog} 
+        onClose={() => setOpenFeedbackDialog(false)} 
+        reclamationId={currentDetail.id}
+        onSubmited={() => dispatch(fetchReclamationDetails(currentDetail.id))}
+      />
+      {/* -------------------------------------------------------- */}
 
     </Box>
   );

@@ -1,26 +1,29 @@
 package com.portclaim.controller;
 
 import com.portclaim.dto.ReclamationDtos.*;
+import com.portclaim.dto.FeedbackRequest; // --- NOUVEAU ---
 import com.portclaim.entity.*;
 import com.portclaim.service.ReclamationService;
+import com.portclaim.service.FeedbackService; // --- NOUVEAU ---
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import jakarta.validation.Valid; // --- NOUVEAU ---
 import java.util.List;
-import java.util.Map; // Import pour les statistiques
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/reclamations")
 @RequiredArgsConstructor
 public class ReclamationController {
     private final ReclamationService service;
+    private final FeedbackService feedbackService; // --- NOUVEAU ---
 
     /**
-     * NOUVEAU : Route pour la page d'Analyses
-     * Placée en premier pour éviter les conflits avec la route /{id}
+     * Route pour la page d'Analyses
      */
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getStats() {
@@ -57,13 +60,11 @@ public class ReclamationController {
         return ResponseEntity.ok(service.updateStatut(id, req.getStatut(), user));
     }
 
-    // --- NOUVEAU : Endpoint pour la mise à jour de la priorité ---
     @PatchMapping("/{id}/priorite")
     public ResponseEntity<ReclamationView> updatePriorite(@PathVariable Long id,
             @RequestBody UpdatePrioriteRequest req, @AuthenticationPrincipal Utilisateur user) {
         return ResponseEntity.ok(service.updatePriorite(id, req.getPriorite(), user));
     }
-    // -------------------------------------------------------------
 
     @PatchMapping("/{id}/affectation")
     public ResponseEntity<ReclamationView> affecter(@PathVariable Long id,
@@ -76,4 +77,15 @@ public class ReclamationController {
             @RequestBody ReponseRequest req, @AuthenticationPrincipal Utilisateur user) {
         return ResponseEntity.ok(service.addReponse(id, req.getMessage(), user));
     }
+
+    // --- NOUVEAU : Endpoint pour la soumission du feedback déplacé ici ---
+    @PostMapping("/{id}/feedback")
+    public ResponseEntity<String> ajouterFeedback(
+            @PathVariable Long id,
+            @Valid @RequestBody FeedbackRequest req,
+            @AuthenticationPrincipal Utilisateur user) {
+        feedbackService.soumettreFeedback(id, req, user);
+        return ResponseEntity.ok("Merci pour votre retour ! Votre évaluation a été enregistrée.");
+    }
+    // ---------------------------------------------------------------------
 }

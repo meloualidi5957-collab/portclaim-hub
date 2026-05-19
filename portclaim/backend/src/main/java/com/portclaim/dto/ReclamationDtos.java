@@ -57,9 +57,12 @@ public class ReclamationDtos {
         private String agentNom;
         private LocalDateTime dateCreation; 
         private LocalDateTime dateModification;
+        private Integer feedbackNote;
+        private String feedbackCommentaire;
         private List<ReponseView> reponses;
 
         public static ReclamationView from(Reclamation r) {
+            
             return ReclamationView.builder()
                 .id(r.getId())
                 .reference(r.getReference())
@@ -75,6 +78,10 @@ public class ReclamationDtos {
                 .agentNom(r.getAgent() != null ? r.getAgent().getPrenom() + " " + r.getAgent().getNom() : null)
                 .dateCreation(r.getDateCreation())
                 .dateModification(r.getDateModification())
+                // --- NOUVEAU : Mapping automatique de la note et du commentaire si le feedback existe ---
+                .feedbackNote(r.getFeedback() != null ? r.getFeedback().getNote() : null)
+                .feedbackCommentaire(r.getFeedback() != null ? r.getFeedback().getCommentaire() : null)
+                // ---------------------------------------------------------------------------------------
                 .build();
         }
     }

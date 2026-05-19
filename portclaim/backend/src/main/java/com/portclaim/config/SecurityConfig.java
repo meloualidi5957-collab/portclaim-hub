@@ -29,6 +29,7 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/error").permitAll() // <-- NOUVEAU : Autorise Spring à afficher la vraie cause d'une erreur
                 // --- AJOUT : Sécurisation explicite des routes ADMIN ---
                 .requestMatchers("/api/audit/**").hasAuthority("ADMIN")
                 .requestMatchers("/api/utilisateurs/**").hasAuthority("ADMIN")

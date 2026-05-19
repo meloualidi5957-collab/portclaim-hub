@@ -30,7 +30,9 @@ const TITRES_CHOIX = [
   "Difficulté d'accès au système (Login/Pass)",
   "Erreur de facturation",
   "Retard de traitement de dossier",
-  "Autre demande d'assistance"
+  "Autre demande d'assistance",
+  "Blocage urgent de conteneur",
+  "Problème de changement de photo"
 ];
 
 const statutColor = {

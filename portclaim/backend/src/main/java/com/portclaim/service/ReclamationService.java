@@ -31,6 +31,10 @@ public class ReclamationService {
     private final AuditService auditService;
     // ----------------------------------------------
 
+    // --- MICROSERVICE IA ---
+    private final AiService aiService;
+    // -----------------------
+
     private final Path fileStorageLocation = Paths.get("uploads").toAbsolutePath().normalize();
 
     @PostConstruct
@@ -143,9 +147,14 @@ public class ReclamationService {
             } catch (Exception ex) { throw new RuntimeException("Erreur stockage fichier", ex); }
         }
 
+        // --- INTELLIGENCE ARTIFICIELLE ---
+        // L'IA analyse automatiquement le texte combiné pour en déduire la priorité
+        Priorite prioriteCalculee = aiService.analyserPriorite(req.getTitre(), req.getDescription());
+        // ----------------------------------
+
         Reclamation r = Reclamation.builder()
             .titre(req.getTitre()).description(req.getDescription()).typeOperation(req.getTitre())
-            .priorite(req.getPriorite() == null ? Priorite.NORMALE : req.getPriorite())
+            .priorite(prioriteCalculee) // Utilisation de la priorité calculée par l'IA
             .reference("PORT-" + System.currentTimeMillis()).statut(Statut.OUVERTE)
             .pieceJointe(fileName).client(client).dateCreation(LocalDateTime.now()).dateModification(LocalDateTime.now())
             .navire("Non spécifié").numeroConteneur("N/A").build();
@@ -154,7 +163,7 @@ public class ReclamationService {
         notifierAdmins("Nouvelle réclamation déposée : " + saved.getReference(), saved.getId());
         
         // --- NOUVEAU : Log de création ---
-        auditService.logAction("CREATION_RECLAMATION", "Nouvelle réclamation déposée : " + saved.getTitre(), client, "RECLAMATION: " + saved.getReference());
+        auditService.logAction("CREATION_RECLAMATION", "Nouvelle réclamation déposée (Priorité IA : " + prioriteCalculee.name() + ") : " + saved.getTitre(), client, "RECLAMATION: " + saved.getReference());
         
         return ReclamationView.from(saved);
     }
